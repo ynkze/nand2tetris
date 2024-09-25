@@ -30,4 +30,4 @@ The overall computer architecture to create:
 
 ## Project 6: Assembler
 
-Created a simple assembler that translates Hack assembly language into binary code
+Created a simple assembler Python script that translates Hack assembly language into binary code.

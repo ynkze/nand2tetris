@@ -52,14 +52,67 @@ comp_dict = {
     "D|A": "010101"
 }
 
-with open(args.filename, 'r') as infile, open(hackfile, 'w') as outfile:
+symbol_table = {
+    "SP": "0",
+    "LCL": "1",
+    "ARG": "2",
+    "THIS": "3",
+    "THAT": "4",
+    "R0": "0",
+    "R1": "1",
+    "R2": "2",
+    "R3": "3",
+    "R4": "4",
+    "R5": "5",
+    "R6": "6",
+    "R7": "7",
+    "R8": "8",
+    "R9": "9",
+    "R10": "10",
+    "R11": "11",
+    "R12": "12",
+    "R13": "13",
+    "R14": "14",
+    "R15": "15",
+    "SCREEN": "16384",
+    "KBD": "24576"
+}
+
+
+# first pass to initialize symbols reference
+with open(args.filename, 'r') as infile:
+    count = 0
     for line in infile:
         start_line = line.replace(" ", "")[0]
 
-        if start_line == "/" or start_line.isspace(): # skip comments and whitespace
+        if start_line == "(": # label symbols
+            label = line.strip()[1:-1]
+            if label not in symbol_table:
+                symbol_table[label] = str(count)
+
+        if start_line == "/" or start_line.isspace() or start_line == "(":
+            continue
+
+        count += 1
+
+# second pass to decode the instructions
+with open(args.filename, 'r') as infile, open(hackfile, 'w') as outfile:
+    variable_value = 16
+    for line in infile:
+        start_line = line.replace(" ", "")[0]
+
+        if start_line == "/" or start_line.isspace() or start_line == "(": # skip comments, labels, whitespace
             continue
         elif start_line == "@": # translate a-instruction
-            address = int(line[1:])
+            variable = line.strip()[1:]
+
+            if not variable.isnumeric(): # resolve pre-defined symbol or variable
+                if variable not in symbol_table:
+                    symbol_table[variable] = variable_value
+                    variable_value += 1
+                variable = symbol_table[variable]
+
+            address = int(variable)
             outstring = bin(address)[2:].zfill(16) + "\n"
             outfile.write(outstring)
         else: # translate c-instruction
@@ -67,13 +120,13 @@ with open(args.filename, 'r') as infile, open(hackfile, 'w') as outfile:
             if ";" in line:
                 parts = re.split(r'\s*;\s*', line)
                 jump = jump_dict[parts[1].strip()]
-                line = parts[0]
-                if "=" not in line:
-                    comp = comp_dict[parts[0]]
+                if "=" not in parts[0]:
+                    comp = comp_dict[parts[0].strip()]
             
             if "=" in line:
                 parts = re.split(r'\s*=\s*', line)
                 dest = dest_dict[parts[0].strip()]
+                # since A and M register binary instruction are quite similar, we set variable "a" depending on if its M
                 if "M" in parts[1]:
                     a = "1"
                     parts[1] = parts[1].replace("M", "A")
